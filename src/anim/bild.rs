@@ -6,18 +6,35 @@ pub struct Bild {
   /// The header of the Klei build file
   #[allow(unused)]
   header: BildHeader,
+
+  /// Build name
+  name: String,
 }
 
 impl Bild {
   /// Creates a new build file from the given bytes
   pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
     let header = BildHeader::from_bytes(bytes).context("failed to read build header")?;
-    Ok(Self { header })
+    let rest = &bytes[std::mem::size_of::<BildHeader>()..];
+
+    if rest.len() < std::mem::size_of::<u32>() {
+      bail!("Not enough bytes for build_name_len ({} bytes)", rest.len());
+    }
+    let build_name_len =
+      u32::from_le_bytes(rest[0..4].try_into().context("Failed to read build_name_len")?) as usize;
+    if rest.len() < 4 + build_name_len {
+      bail!("Not enough bytes for build_name ({} bytes)", rest.len());
+    }
+    let name = String::from_utf8(rest[4..4 + build_name_len].to_vec()).context("Failed to read build_name")?;
+    let rest = &rest[4 + build_name_len..];
+    log::debug!("rest[..16]: {:?}", rest.get(..16).unwrap_or(&[]));
+
+    Ok(Self { header, name })
   }
 }
 
 // The header of a Klei build file
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct BildHeader {
   magic: [u8; 4],
   version: u32,
@@ -35,12 +52,7 @@ impl BildHeader {
       bail!("Not enough bytes for build header ({} bytes)", bytes.len());
     }
 
-    let mut header = Self {
-      magic: [0; 4],
-      version: 0,
-      num_symbols: 0,
-      num_frames: 0,
-    };
+    let mut header = Self::default();
 
     let magic = &bytes[0..4];
     if magic != Self::MAGIC {

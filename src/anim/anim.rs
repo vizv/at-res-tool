@@ -17,7 +17,7 @@ impl Anim {
 }
 
 // The header of a Klei animation file
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct AnimHeader {
   magic: [u8; 4],
   version: u32,
@@ -37,14 +37,7 @@ impl AnimHeader {
       bail!("Not enough bytes for anim header ({} bytes)", bytes.len());
     }
 
-    let mut header = Self {
-      magic: [0; 4],
-      version: 0,
-      num_elements: 0,
-      num_frames: 0,
-      num_events: 0,
-      num_anims: 0,
-    };
+    let mut header = Self::default();
 
     let magic = &bytes[0..4];
     if magic != Self::MAGIC {

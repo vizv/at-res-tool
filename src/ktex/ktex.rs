@@ -31,7 +31,7 @@ impl Ktex {
 }
 
 /// The header of a Klei texture file
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[repr(packed)]
 struct KtexHeader {
   magic: [u8; 4],
@@ -50,12 +50,7 @@ impl KtexHeader {
       bail!("Not enough bytes for ktex header ({} bytes)", bytes.len());
     }
 
-    let mut header = Self {
-      magic: [0; 4],
-      version: 0,
-      width: 0,
-      height: 0,
-    };
+    let mut header = Self::default();
 
     let magic = &bytes[0..4];
     if magic != Self::MAGIC {
