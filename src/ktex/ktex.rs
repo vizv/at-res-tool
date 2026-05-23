@@ -1,19 +1,30 @@
 use std::{fs, path::Path};
 
 use anyhow::{Context, Result, bail};
+use image::ImageBuffer;
+use image_dds::ddsfile::Dds;
 
 /// The Klei texture file
 pub struct Ktex {
-  /// The Klei texture data
-  data: Vec<u8>,
+  /// The header of the Klei texture file
+  header: KtexHeader,
+  /// The Klei texture DDS data
+  dds: Dds,
 }
 
 impl Ktex {
-  pub fn new(path: impl AsRef<Path>) -> Result<Self> {
+  /// Creates a new ktex file from the given file path
+  pub fn from_path(path: impl AsRef<Path>) -> Result<Self> {
     let data = fs::read(path)?;
-    let header = KtexHeader::from_bytes(&data)?;
-    log::debug!("Read ktex file with header: {:?}", header);
-    Ok(Self { data })
+    let header = KtexHeader::from_bytes(&data).context("failed to read ktex header")?;
+    let data = &data[std::mem::size_of::<KtexHeader>()..];
+    let dds = Dds::read(data).context("failed to read DDS data")?;
+    Ok(Self { header, dds })
+  }
+
+  /// Gets the image as an ImageBuffer
+  pub fn get_image(&self) -> Result<ImageBuffer<image::Rgba<u8>, Vec<u8>>> {
+    image_dds::image_from_dds(&self.dds, 0).context("failed to convert DDS to image")
   }
 }
 
