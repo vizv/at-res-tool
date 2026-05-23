@@ -4,8 +4,6 @@ use anyhow::{Context as _, Result, bail};
 
 use crate::io::*;
 
-mod material;
-
 /// The Klei build file
 #[derive(Debug)]
 pub struct Bild {
@@ -30,7 +28,7 @@ impl Bild {
 
     let materials_len = cursor.read_u32_le().context("failed to read materials length")?;
     let materials = (0..materials_len)
-      .map(|_| material::Material::from_cursor(&mut cursor).context("failed to read material").map(|m| m.to_string()))
+      .map(|_| cursor.read_pascal_string_u32_le().context("failed to read material name"))
       .collect::<Result<Vec<_>>>()?;
 
     Ok(Self {
