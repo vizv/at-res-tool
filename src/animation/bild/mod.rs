@@ -1,20 +1,23 @@
 use anyhow::{Result, bail};
 
-mod bild;
+mod bild_file;
 mod frame;
 mod symbol;
 
 mod data;
 
 pub fn parse(bytes: &[u8]) -> Result<data::Build> {
-  let bild = bild::Bild::from_bytes(bytes)?;
+  let bild_file = bild_file::BildFile::from_bytes(bytes)?;
   let mut build = data::Build::default();
 
-  build.name = bild.name;
-  for symbol in bild.symbols {
+  build.name = bild_file.name;
+  for symbol in bild_file.symbols {
     let mut build_symbol = data::BuildSymbol::default();
-    let name =
-      bild.hashed_strings.get(&symbol.hash).ok_or_else(|| anyhow::anyhow!("failed to find symbol name"))?.to_owned();
+    let name = bild_file
+      .hashed_strings
+      .get(&symbol.hash)
+      .ok_or_else(|| anyhow::anyhow!("failed to find symbol name"))?
+      .to_owned();
     build_symbol.name = name;
     for frame in symbol.frames {
       let mut build_frame = data::BuildFrame::default();
@@ -32,7 +35,7 @@ pub fn parse(bytes: &[u8]) -> Result<data::Build> {
       let mut u2 = f32::MIN;
       let mut v2 = f32::MIN;
       for vertex_index in frame.vb_start_index..(frame.vb_start_index + frame.num_verts) {
-        let &(_x, _y, z, u, v, w) = bild
+        let &(_x, _y, z, u, v, w) = bild_file
           .vertices
           .get(vertex_index as usize)
           .ok_or_else(|| anyhow::anyhow!("failed to find vertex for frame {} (index {})", frame.num, vertex_index))?;
@@ -50,12 +53,12 @@ pub fn parse(bytes: &[u8]) -> Result<data::Build> {
         }
 
         build_frame.atlas_index = w as usize;
-        if build_frame.atlas_index >= bild.materials.len() {
+        if build_frame.atlas_index >= bild_file.materials.len() {
           bail!(
             "unexpected vertex material index in frame {}: {} ({} materials)",
             frame.num,
             build_frame.atlas_index,
-            bild.materials.len()
+            bild_file.materials.len()
           );
         }
       }

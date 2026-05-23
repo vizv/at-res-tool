@@ -6,7 +6,7 @@ use crate::io::*;
 
 /// The Klei build file
 #[derive(Debug)]
-pub struct Bild {
+pub struct BildFile {
   /// The header of the Klei build file
   #[allow(unused)]
   header: BildHeader,
@@ -27,7 +27,7 @@ pub struct Bild {
   pub hashed_strings: BTreeMap<u32, String>,
 }
 
-impl Bild {
+impl BildFile {
   /// Creates a new build file from the given bytes
   pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
     let mut cursor = Cursor::new(bytes);
