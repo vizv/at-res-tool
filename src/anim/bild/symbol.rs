@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use anyhow::{Context as _, Result, bail};
+use anyhow::{Context as _, Result};
 
 use crate::io::*;
 
