@@ -6,13 +6,13 @@ use crate::io::*;
 
 /// The Klei animation file
 #[derive(Debug)]
-pub struct Anim {
+pub struct AnimFile {
   /// The header of the Klei animation file
   #[allow(unused)]
   header: AnimHeader,
 }
 
-impl Anim {
+impl AnimFile {
   /// Creates a new anim file from the given bytes
   pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
     let mut cursor = Cursor::new(bytes);

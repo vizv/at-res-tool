@@ -43,7 +43,7 @@ pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
   }
 
   if !anim_bin.is_empty() {
-    let anim = anim::Anim::from_bytes(&anim_bin).context("failed to parse anim.bin from anim file")?;
+    let anim = anim::AnimFile::from_bytes(&anim_bin).context("failed to parse anim.bin from anim file")?;
     log::debug!("anim.bin: {:#?}", anim);
   }
 
