@@ -1,7 +1,7 @@
 use std::{fs, io::Cursor, path::Path};
 
 use anyhow::{Context as _, Result, bail};
-use image::ImageBuffer;
+use image::{ImageBuffer, Rgba};
 use image_dds::ddsfile::Dds;
 
 use crate::io::*;
@@ -33,7 +33,7 @@ impl Ktex {
   }
 
   /// Gets the image as an ImageBuffer
-  pub fn get_image(&self) -> Result<ImageBuffer<image::Rgba<u8>, Vec<u8>>> {
+  pub fn get_image(&self) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>> {
     image_dds::image_from_dds(&self.dds, 0).context("failed to convert DDS to image")
   }
 }

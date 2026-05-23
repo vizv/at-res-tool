@@ -1,6 +1,7 @@
-use std::{fs::File, io::Read};
+use std::{collections::BTreeMap, fs::File, io::Read};
 
 use anyhow::{Context as _, Result, bail};
+use image::{ImageBuffer, Rgba};
 use zip::ZipArchive;
 
 mod shared;
@@ -44,18 +45,26 @@ pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
     }
   }
 
-  if !anim_bin.is_empty() {
-    let animations = anim::parse(&anim_bin).context("failed to parse anim.bin from anim file")?;
-    log::debug!("animations: {:#?}", animations);
-  }
-
   if !build_bin.is_empty() {
     let build = bild::parse(&build_bin).context("failed to parse build.bin from anim file")?;
-    log::debug!("build.bin: {:#?}", build);
-  }
+    // TODO: export build to XML
+    // log::debug!("build.bin: {:#?}", build);
 
-  for (i, atlas) in atlases.iter().enumerate() {
-    log::debug!("atlas-{}.tex size: {} bytes", i, atlas.len());
+    let atlas_images: BTreeMap<usize, ImageBuffer<Rgba<u8>, Vec<u8>>> = atlases
+      .iter()
+      .enumerate()
+      .map(|(i, atlas)| {
+        let image = crate::texture::parse(atlas).context(format!("failed to parse atlas {} from anim file", i))?;
+        Ok((i, image))
+      })
+      .collect::<Result<BTreeMap<_, _>>>()?;
+    log::debug!("atlas images count: {}", atlas_images.len());
+
+    if !anim_bin.is_empty() {
+      let animations = anim::parse(&anim_bin).context("failed to parse anim.bin from anim file")?;
+      // TODO: export animations to XML
+      // log::debug!("animations: {:#?}", animations);
+    }
   }
 
   Ok(())
