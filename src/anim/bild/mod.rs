@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::{collections::BTreeMap, io::Cursor};
 
 use anyhow::{Context as _, Result, bail};
 
@@ -22,6 +22,12 @@ pub struct Bild {
 
   /// Symbols
   symbols: Vec<symbol::Symbol>,
+
+  /// Vertices (x, y, z, u, v, w)
+  vertices: Vec<(f32, f32, f32, f32, f32, f32)>,
+
+  /// Hashed Strings
+  hashed_strings: BTreeMap<u32, String>,
 }
 
 impl Bild {
@@ -41,11 +47,35 @@ impl Bild {
       .map(|_| symbol::Symbol::from_cursor(&mut cursor).context("failed to read symbol"))
       .collect::<Result<Vec<_>>>()?;
 
+    let vertices_len = cursor.read_u32_le().context("failed to read vertices length")?;
+    let vertices = (0..vertices_len)
+      .map(|_| {
+        let x = cursor.read_f32_le().context("failed to read vertex x")?;
+        let y = cursor.read_f32_le().context("failed to read vertex y")?;
+        let z = cursor.read_f32_le().context("failed to read vertex z")?;
+        let u = cursor.read_f32_le().context("failed to read vertex u")?;
+        let v = cursor.read_f32_le().context("failed to read vertex v")?;
+        let w = cursor.read_f32_le().context("failed to read vertex w")?;
+        Ok((x, y, z, u, v, w))
+      })
+      .collect::<Result<Vec<_>>>()?;
+
+    let hashed_strings_len = cursor.read_u32_le().context("failed to read hashed strings length")?;
+    let hashed_strings = (0..hashed_strings_len)
+      .map(|_| {
+        let hash = cursor.read_u32_le().context("failed to read hashed string hash")?;
+        let string = cursor.read_pascal_string_u32_le().context("failed to read hashed string value")?;
+        Ok((hash, string))
+      })
+      .collect::<Result<BTreeMap<_, _>>>()?;
+
     Ok(Self {
       header,
       name,
       materials,
       symbols,
+      vertices,
+      hashed_strings,
     })
   }
 }
