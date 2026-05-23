@@ -4,6 +4,7 @@ use anyhow::{Context, Result, bail};
 use zip::ZipArchive;
 
 mod anim;
+mod bild;
 
 pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
   let file = File::open(&path).context("failed to open anim file")?;
@@ -46,7 +47,11 @@ pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
     log::debug!("anim.bin: {:#?}", anim);
   }
 
-  log::debug!("build.bin size: {} bytes", build_bin.len());
+  if !build_bin.is_empty() {
+    let build = bild::Bild::from_bytes(&build_bin).context("failed to parse build.bin from anim file")?;
+    log::debug!("build.bin: {:#?}", build);
+  }
+
   for (i, atlas) in atlases.iter().enumerate() {
     log::debug!("atlas-{}.tex size: {} bytes", i, atlas.len());
   }
