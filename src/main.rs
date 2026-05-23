@@ -4,8 +4,8 @@ use flexi_logger::{LevelFilter, LogSpecBuilder, Logger};
 
 mod io;
 
-mod anim;
-mod ktex;
+mod animation;
+mod texture;
 
 /// The Away Team resource tool for dumping and repacking game resources
 #[derive(Debug, Parser)]
@@ -52,10 +52,10 @@ async fn main() -> Result<()> {
 
   match args.command {
     Commands::Ktex { command } => match command {
-      KtexCommands::Dump { path } => ktex::dump(path)?,
+      KtexCommands::Dump { path } => texture::dump(path)?,
     },
     Commands::Anim { command } => match command {
-      AnimCommands::Dump { path } => anim::dump(path)?,
+      AnimCommands::Dump { path } => animation::dump(path)?,
     },
   }
 
