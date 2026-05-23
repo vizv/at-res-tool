@@ -38,8 +38,6 @@ impl Frame {
     frame.vb_start_index = cursor.read_u32_le().context("failed to read frame vertex buffer start index")?;
     frame.num_verts = cursor.read_u32_le().context("failed to read frame number of vertices")?;
 
-    log::debug!("??? frame = {:#?}", frame);
-
     Ok(frame)
   }
 }
