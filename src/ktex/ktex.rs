@@ -7,6 +7,7 @@ use image_dds::ddsfile::Dds;
 /// The Klei texture file
 pub struct Ktex {
   /// The header of the Klei texture file
+  #[allow(unused)]
   header: KtexHeader,
   /// The Klei texture DDS data
   dds: Dds,
