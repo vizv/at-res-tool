@@ -15,6 +15,9 @@ pub struct Bild {
 
   /// Build name
   name: String,
+
+  /// Materials
+  materials: Vec<String>,
 }
 
 impl Bild {
@@ -25,7 +28,16 @@ impl Bild {
     let header = BildHeader::from_bytes(&mut cursor).context("failed to read build header")?;
     let name = cursor.read_pascal_string_u32_le().context("failed to read build name")?;
 
-    Ok(Self { header, name })
+    let materials_len = cursor.read_u32_le().context("failed to read materials length")?;
+    let materials = (0..materials_len)
+      .map(|_| material::Material::from_cursor(&mut cursor).context("failed to read material").map(|m| m.to_string()))
+      .collect::<Result<Vec<_>>>()?;
+
+    Ok(Self {
+      header,
+      name,
+      materials,
+    })
   }
 }
 
