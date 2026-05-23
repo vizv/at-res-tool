@@ -47,6 +47,7 @@ pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
 
   if !build_bin.is_empty() {
     let build = bild::parse(&build_bin).context("failed to parse build.bin from anim file")?;
+    let build_xml_path = path.as_ref().with_extension("build.xml");
     // TODO: export build to XML
     // log::debug!("build.bin: {:#?}", build);
 
@@ -58,10 +59,41 @@ pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
         Ok((i, image))
       })
       .collect::<Result<BTreeMap<_, _>>>()?;
-    log::debug!("atlas images count: {}", atlas_images.len());
+
+    // export sprites
+    let build_name = build.name.as_str();
+    for symbol in build.symbols {
+      let symbol_name = symbol.name.as_str();
+      for frame in symbol.frames {
+        let frame_num = frame.num;
+        let output_path = path.as_ref().with_extension(format!("{}.{}.png", symbol_name, frame_num));
+        let atlas_image = atlas_images.get(&frame.atlas_index).ok_or_else(|| {
+          anyhow::anyhow!(
+            "failed to find atlas image for frame {} (atlas index {})",
+            frame.num,
+            frame.atlas_index
+          )
+        })?;
+
+        let sprite = image::imageops::crop_imm(
+          atlas_image,
+          (frame.uv_box.x * atlas_image.width() as f32).floor() as u32,
+          (frame.uv_box.y * atlas_image.height() as f32).floor() as u32,
+          (frame.uv_box.w * atlas_image.width() as f32).ceil() as u32,
+          (frame.uv_box.h * atlas_image.height() as f32).ceil() as u32,
+        )
+        .to_image();
+
+        sprite.save(&output_path).context(format!(
+          "failed to save sprite for symbol {} frame {}",
+          symbol.name, frame.num
+        ))?;
+      }
+    }
 
     if !anim_bin.is_empty() {
       let animations = anim::parse(&anim_bin).context("failed to parse anim.bin from anim file")?;
+      let anim_xml_path = path.as_ref().with_extension("anim.xml");
       // TODO: export animations to XML
       // log::debug!("animations: {:#?}", animations);
     }
