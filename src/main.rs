@@ -2,6 +2,8 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use flexi_logger::{LevelFilter, LogSpecBuilder, Logger};
 
+mod io;
+
 mod anim;
 mod ktex;
 

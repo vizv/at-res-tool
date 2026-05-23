@@ -1,8 +1,10 @@
-use std::{fs, path::Path};
+use std::{fs, io::Cursor, path::Path};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context as _, Result, bail};
 use image::ImageBuffer;
 use image_dds::ddsfile::Dds;
+
+use crate::io::*;
 
 /// The Klei texture file
 #[derive(Debug)]
@@ -18,9 +20,15 @@ impl Ktex {
   /// Creates a new ktex file from the given file path
   pub fn from_path(path: impl AsRef<Path>) -> Result<Self> {
     let data = fs::read(path)?;
-    let header = KtexHeader::from_bytes(&data).context("failed to read ktex header")?;
-    let data = &data[std::mem::size_of::<KtexHeader>()..];
-    let dds = Dds::read(data).context("failed to read DDS data")?;
+    Self::from_bytes(&data)
+  }
+
+  pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+    let mut cursor = Cursor::new(bytes);
+
+    let header = KtexHeader::from_bytes(&mut cursor).context("failed to read ktex header")?;
+    let dds = Dds::read(&mut cursor).context("failed to read DDS data")?;
+
     Ok(Self { header, dds })
   }
 
@@ -32,9 +40,7 @@ impl Ktex {
 
 /// The header of a Klei texture file
 #[derive(Debug, Default)]
-#[repr(packed)]
 struct KtexHeader {
-  magic: [u8; 4],
   version: u8,
   width: u16,
   height: u16,
@@ -45,45 +51,37 @@ impl KtexHeader {
   const SUPPORTED_VERSION: u8 = 2;
 
   /// Creates a new ktex header from the given bytes
-  pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-    if bytes.len() < std::mem::size_of::<Self>() {
-      bail!("Not enough bytes for ktex header ({} bytes)", bytes.len());
-    }
+  pub fn from_bytes(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
+    cursor.read_magic(&Self::MAGIC).context("Failed to read magic")?;
 
     let mut header = Self::default();
 
-    let magic = &bytes[0..4];
-    if magic != Self::MAGIC {
-      bail!(
-        "Invalid ktex file: expected file magic {:?}, got {:?}",
-        Self::MAGIC,
-        magic
-      );
-    }
-    header.magic.copy_from_slice(magic);
+    header.version = cursor.read_u8().context("Failed to read version")?;
+    header.width = cursor.read_u16_le().context("Failed to read width")?;
+    header.height = cursor.read_u16_le().context("Failed to read height")?;
 
-    let version = bytes[4];
-    if version != Self::SUPPORTED_VERSION {
+    header.validate().context("Invalid ktex header")?;
+
+    Ok(header)
+  }
+
+  fn validate(&self) -> Result<()> {
+    if self.version != Self::SUPPORTED_VERSION {
       bail!(
         "Unsupported ktex file: expected version {}, got {}",
         Self::SUPPORTED_VERSION,
-        version
+        self.version
       );
     }
-    header.version = version;
 
-    let width = u16::from_le_bytes(bytes[5..7].try_into().context("Failed to read width")?);
-    let height = u16::from_le_bytes(bytes[7..9].try_into().context("Failed to read height")?);
-    if width % 2 != 0 || height % 2 != 0 {
+    if self.width % 2 != 0 || self.height % 2 != 0 {
       bail!(
         "Invalid ktex file: width and height must be even, got {}x{}",
-        width,
-        height
+        self.width,
+        self.height
       );
     }
-    header.width = u16::from_le_bytes(bytes[5..7].try_into().unwrap());
-    header.height = u16::from_le_bytes(bytes[7..9].try_into().unwrap());
 
-    Ok(header)
+    Ok(())
   }
 }

@@ -1,4 +1,8 @@
-use anyhow::{Context, Result, bail};
+use std::io::Cursor;
+
+use anyhow::{Context as _, Result, bail};
+
+use crate::io::*;
 
 /// The Klei animation file
 #[derive(Debug)]
@@ -11,7 +15,10 @@ pub struct Anim {
 impl Anim {
   /// Creates a new anim file from the given bytes
   pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-    let header = AnimHeader::from_bytes(bytes).context("failed to read anim header")?;
+    let mut cursor = Cursor::new(bytes);
+
+    let header = AnimHeader::from_bytes(&mut cursor).context("failed to read anim header")?;
+
     Ok(Self { header })
   }
 }
@@ -19,7 +26,6 @@ impl Anim {
 // The header of a Klei animation file
 #[derive(Debug, Default)]
 struct AnimHeader {
-  magic: [u8; 4],
   version: u32,
   num_elements: u32,
   num_frames: u32,
@@ -32,42 +38,35 @@ impl AnimHeader {
   const SUPPORTED_VERSIONS: &[u32] = &[5, 6];
 
   /// Creates a new anim header from the given bytes
-  pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-    if bytes.len() < std::mem::size_of::<Self>() {
-      bail!("Not enough bytes for anim header ({} bytes)", bytes.len());
-    }
+  pub fn from_bytes(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
+    cursor.read_magic(&Self::MAGIC).context("Failed to read magic")?;
 
     let mut header = Self::default();
 
-    let magic = &bytes[0..4];
-    if magic != Self::MAGIC {
-      bail!(
-        "Invalid anim file: expected file magic {:?}, got {:?}",
-        Self::MAGIC,
-        magic
-      );
-    }
-    header.magic.copy_from_slice(magic);
+    header.version = cursor.read_u32_le().context("Failed to read version")?;
+    header.num_elements = cursor.read_u32_le().context("Failed to read num_elements")?;
+    header.num_frames = cursor.read_u32_le().context("Failed to read num_frames")?;
+    header.num_events = cursor.read_u32_le().context("Failed to read num_events")?;
+    header.num_anims = cursor.read_u32_le().context("Failed to read num_anims")?;
 
-    let version = u32::from_le_bytes(bytes[4..8].try_into().context("Failed to read version")?);
-    if !Self::SUPPORTED_VERSIONS.contains(&version) {
+    header.validate().context("Invalid anim header")?;
+
+    Ok(header)
+  }
+
+  fn validate(&self) -> Result<()> {
+    if !Self::SUPPORTED_VERSIONS.contains(&self.version) {
       bail!(
         "Unsupported anim version: expected {:?}, got {}",
         Self::SUPPORTED_VERSIONS,
-        version
+        self.version
       );
     }
-    header.version = version;
 
-    header.num_elements = u32::from_le_bytes(bytes[8..12].try_into().context("Failed to read num_elements")?);
-    header.num_frames = u32::from_le_bytes(bytes[12..16].try_into().context("Failed to read num_frames")?);
-    header.num_events = u32::from_le_bytes(bytes[16..20].try_into().context("Failed to read num_events")?);
-    header.num_anims = u32::from_le_bytes(bytes[20..24].try_into().context("Failed to read num_anims")?);
-
-    if header.num_events != 0 {
+    if self.num_events != 0 {
       bail!("Unsupported anim file: events are not supported");
     }
 
-    Ok(header)
+    Ok(())
   }
 }

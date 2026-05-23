@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context as _, Result, bail};
 use zip::ZipArchive;
 
 mod anim;
