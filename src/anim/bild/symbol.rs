@@ -8,10 +8,10 @@ use crate::io::*;
 #[derive(Debug)]
 pub struct Symbol {
   /// Symbol hash
-  hash: u32,
+  pub hash: u32,
 
   /// Frames in the symbol
-  frames: Vec<super::frame::Frame>,
+  pub frames: Vec<super::frame::Frame>,
 }
 
 impl Symbol {

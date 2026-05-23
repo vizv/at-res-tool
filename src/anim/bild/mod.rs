@@ -1,122 +1,74 @@
-use std::{collections::BTreeMap, io::Cursor};
+use anyhow::{Result, bail};
 
-use anyhow::{Context as _, Result, bail};
-
-use crate::io::*;
-
+mod bild;
 mod frame;
 mod symbol;
 
-/// The Klei build file
-#[derive(Debug)]
-pub struct Bild {
-  /// The header of the Klei build file
-  #[allow(unused)]
-  header: BildHeader,
+mod data;
 
-  /// Build name
-  name: String,
+pub fn parse(bytes: &[u8]) -> Result<data::Build> {
+  let bild = bild::Bild::from_bytes(bytes)?;
+  let mut build = data::Build::default();
 
-  /// Materials
-  materials: Vec<String>,
+  build.name = bild.name;
+  for symbol in bild.symbols {
+    let mut build_symbol = data::BuildSymbol::default();
+    let name =
+      bild.hashed_strings.get(&symbol.hash).ok_or_else(|| anyhow::anyhow!("failed to find symbol name"))?.to_owned();
+    build_symbol.name = name;
+    for frame in symbol.frames {
+      let mut build_frame = data::BuildFrame::default();
+      build_frame.num = frame.num;
+      build_frame.duration = frame.duration;
+      build_frame.bounding_box = data::RectangleBox {
+        x: frame.bbox.0,
+        y: frame.bbox.1,
+        w: frame.bbox.2,
+        h: frame.bbox.3,
+      };
 
-  /// Symbols
-  symbols: Vec<symbol::Symbol>,
+      let mut u1 = f32::MAX;
+      let mut v1 = f32::MAX;
+      let mut u2 = f32::MIN;
+      let mut v2 = f32::MIN;
+      for vertex_index in frame.vb_start_index..(frame.vb_start_index + frame.num_verts) {
+        let &(_x, _y, z, u, v, w) = bild
+          .vertices
+          .get(vertex_index as usize)
+          .ok_or_else(|| anyhow::anyhow!("failed to find vertex for frame {} (index {})", frame.num, vertex_index))?;
+        u1 = u1.min(u);
+        v1 = v1.min(v);
+        u2 = u2.max(u);
+        v2 = v2.max(v);
 
-  /// Vertices (x, y, z, u, v, w)
-  vertices: Vec<(f32, f32, f32, f32, f32, f32)>,
+        if z != 0.0 {
+          bail!("unexpected non-zero vertex z value in frame {}: {}", frame.num, z);
+        }
 
-  /// Hashed Strings
-  hashed_strings: BTreeMap<u32, String>,
-}
+        if w % 1.0 != 0.0 {
+          bail!("unexpected non-integer vertex w value in frame {}: {}", frame.num, w);
+        }
 
-impl Bild {
-  /// Creates a new build file from the given bytes
-  pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-    let mut cursor = Cursor::new(bytes);
-
-    let header = BildHeader::from_cursor(&mut cursor).context("failed to read build header")?;
-    let name = cursor.read_pascal_string_u32_le().context("failed to read build name")?;
-
-    let materials_len = cursor.read_u32_le().context("failed to read materials length")?;
-    let materials = (0..materials_len)
-      .map(|_| cursor.read_pascal_string_u32_le().context("failed to read material name"))
-      .collect::<Result<Vec<_>>>()?;
-
-    let symbols = (0..header.num_symbols)
-      .map(|_| symbol::Symbol::from_cursor(&mut cursor).context("failed to read symbol"))
-      .collect::<Result<Vec<_>>>()?;
-
-    let vertices_len = cursor.read_u32_le().context("failed to read vertices length")?;
-    let vertices = (0..vertices_len)
-      .map(|_| {
-        let x = cursor.read_f32_le().context("failed to read vertex x")?;
-        let y = cursor.read_f32_le().context("failed to read vertex y")?;
-        let z = cursor.read_f32_le().context("failed to read vertex z")?;
-        let u = cursor.read_f32_le().context("failed to read vertex u")?;
-        let v = cursor.read_f32_le().context("failed to read vertex v")?;
-        let w = cursor.read_f32_le().context("failed to read vertex w")?;
-        Ok((x, y, z, u, v, w))
-      })
-      .collect::<Result<Vec<_>>>()?;
-
-    let hashed_strings_len = cursor.read_u32_le().context("failed to read hashed strings length")?;
-    let hashed_strings = (0..hashed_strings_len)
-      .map(|_| {
-        let hash = cursor.read_u32_le().context("failed to read hashed string hash")?;
-        let string = cursor.read_pascal_string_u32_le().context("failed to read hashed string value")?;
-        Ok((hash, string))
-      })
-      .collect::<Result<BTreeMap<_, _>>>()?;
-
-    Ok(Self {
-      header,
-      name,
-      materials,
-      symbols,
-      vertices,
-      hashed_strings,
-    })
-  }
-}
-
-// The header of a Klei build file
-#[derive(Debug, Default)]
-struct BildHeader {
-  version: u32,
-  num_symbols: u32,
-  num_frames: u32,
-}
-
-impl BildHeader {
-  const MAGIC: [u8; 4] = *b"BILD";
-  const SUPPORTED_VERSION: u32 = 6;
-
-  /// Creates a new build header from the given cursor
-  pub fn from_cursor(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
-    cursor.read_magic(&Self::MAGIC).context("Failed to read magic")?;
-
-    let mut header = Self::default();
-
-    header.version = cursor.read_u32_le().context("Failed to read version")?;
-    header.num_symbols = cursor.read_u32_le().context("Failed to read num_symbols")?;
-    header.num_frames = cursor.read_u32_le().context("Failed to read num_frames")?;
-
-    header.validate().context("Invalid build header")?;
-
-    Ok(header)
-  }
-
-  /// Validates the build header
-  fn validate(&self) -> Result<()> {
-    if self.version != Self::SUPPORTED_VERSION {
-      bail!(
-        "Unsupported build version: expected {}, got {}",
-        Self::SUPPORTED_VERSION,
-        self.version
-      );
+        build_frame.atlas_index = w as usize;
+        if build_frame.atlas_index >= bild.materials.len() {
+          bail!(
+            "unexpected vertex material index in frame {}: {} ({} materials)",
+            frame.num,
+            build_frame.atlas_index,
+            bild.materials.len()
+          );
+        }
+      }
+      build_frame.uv_box = data::RectangleBox {
+        x: u1,
+        y: v1,
+        w: u2 - u1,
+        h: v2 - v1,
+      };
+      build_symbol.frames.push(build_frame);
     }
-
-    Ok(())
+    build.symbols.push(build_symbol);
   }
+
+  Ok(build)
 }

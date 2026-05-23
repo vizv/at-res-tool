@@ -48,7 +48,7 @@ pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
   }
 
   if !build_bin.is_empty() {
-    let build = bild::Bild::from_bytes(&build_bin).context("failed to parse build.bin from anim file")?;
+    let build = bild::parse(&build_bin).context("failed to parse build.bin from anim file")?;
     log::debug!("build.bin: {:#?}", build);
   }
 

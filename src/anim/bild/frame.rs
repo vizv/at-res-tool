@@ -8,19 +8,19 @@ use crate::io::*;
 #[derive(Debug, Default)]
 pub struct Frame {
   /// Frame number
-  num: u32,
+  pub num: u32,
 
   /// Frame duration
-  duration: u32,
+  pub duration: u32,
 
   /// Bounding box (x, y, w, h)
-  bbox: (f32, f32, f32, f32),
+  pub bbox: (f32, f32, f32, f32),
 
   /// Vertex buffer start index
-  vb_start_index: u32,
+  pub vb_start_index: u32,
 
   /// Number of vertices in the vertex buffer
-  num_verts: u32,
+  pub num_verts: u32,
 }
 
 impl Frame {
