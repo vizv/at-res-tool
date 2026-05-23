@@ -25,19 +25,11 @@ pub struct BuildFrame {
   pub duration: u32,
 
   /// Bounding box
-  pub bounding_box: RectangleBox,
+  pub bounding_box: super::super::shared::RectangleBox,
 
   /// Atlas index
   pub atlas_index: usize,
 
   /// Atlas UV box
-  pub uv_box: RectangleBox,
-}
-
-#[derive(Debug, Default)]
-pub struct RectangleBox {
-  pub x: f32,
-  pub y: f32,
-  pub w: f32,
-  pub h: f32,
+  pub uv_box: super::super::shared::RectangleBox,
 }

@@ -1,6 +1,7 @@
 use anyhow::{Result, bail};
 
 mod bild_file;
+
 mod frame;
 mod symbol;
 
@@ -23,7 +24,7 @@ pub fn parse(bytes: &[u8]) -> Result<data::Build> {
       let mut build_frame = data::BuildFrame::default();
       build_frame.num = frame.num;
       build_frame.duration = frame.duration;
-      build_frame.bounding_box = data::RectangleBox {
+      build_frame.bounding_box = super::shared::RectangleBox {
         x: frame.bbox.0,
         y: frame.bbox.1,
         w: frame.bbox.2,
@@ -62,7 +63,7 @@ pub fn parse(bytes: &[u8]) -> Result<data::Build> {
           );
         }
       }
-      build_frame.uv_box = data::RectangleBox {
+      build_frame.uv_box = super::shared::RectangleBox {
         x: u1,
         y: v1,
         w: u2 - u1,

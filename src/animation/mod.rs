@@ -3,6 +3,8 @@ use std::{fs::File, io::Read};
 use anyhow::{Context as _, Result, bail};
 use zip::ZipArchive;
 
+mod shared;
+
 mod anim;
 mod bild;
 
@@ -43,8 +45,8 @@ pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
   }
 
   if !anim_bin.is_empty() {
-    let anim = anim::AnimFile::from_bytes(&anim_bin).context("failed to parse anim.bin from anim file")?;
-    log::debug!("anim.bin: {:#?}", anim);
+    let animations = anim::parse(&anim_bin).context("failed to parse anim.bin from anim file")?;
+    log::debug!("animations: {:#?}", animations);
   }
 
   if !build_bin.is_empty() {

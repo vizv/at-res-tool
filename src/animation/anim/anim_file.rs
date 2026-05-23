@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::{collections::BTreeMap, io::Cursor};
 
 use anyhow::{Context as _, Result, bail};
 
@@ -8,8 +8,13 @@ use crate::io::*;
 #[derive(Debug)]
 pub struct AnimFile {
   /// The header of the Klei animation file
-  #[allow(unused)]
   header: AnimHeader,
+
+  /// Animations
+  pub anims: Vec<super::anim::Anim>,
+
+  /// Hashed Strings
+  pub hashed_strings: BTreeMap<u32, String>,
 }
 
 impl AnimFile {
@@ -18,8 +23,24 @@ impl AnimFile {
     let mut cursor = Cursor::new(bytes);
 
     let header = AnimHeader::from_cursor(&mut cursor).context("failed to read anim header")?;
+    let anims = (0..header.num_anims)
+      .map(|_| super::anim::Anim::from_cursor(&mut cursor, header.version).context("failed to read anim"))
+      .collect::<Result<Vec<_>>>()?;
 
-    Ok(Self { header })
+    let hashed_strings_len = cursor.read_u32_le().context("failed to read hashed strings length")?;
+    let hashed_strings = (0..hashed_strings_len)
+      .map(|_| {
+        let hash = cursor.read_u32_le().context("failed to read hashed string hash")?;
+        let string = cursor.read_pascal_string_u32_le().context("failed to read hashed string value")?;
+        Ok((hash, string))
+      })
+      .collect::<Result<BTreeMap<_, _>>>()?;
+
+    Ok(Self {
+      header,
+      anims,
+      hashed_strings,
+    })
   }
 }
 

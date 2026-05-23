@@ -8,7 +8,6 @@ use crate::io::*;
 #[derive(Debug)]
 pub struct BildFile {
   /// The header of the Klei build file
-  #[allow(unused)]
   header: BildHeader,
 
   /// Build name
