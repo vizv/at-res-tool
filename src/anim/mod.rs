@@ -41,7 +41,11 @@ pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
     }
   }
 
-  log::debug!("anim.bin size: {} bytes", anim_bin.len());
+  if !anim_bin.is_empty() {
+    let anim = anim::Anim::from_bytes(&anim_bin).context("failed to parse anim.bin from anim file")?;
+    log::debug!("anim.bin: {:#?}", anim);
+  }
+
   log::debug!("build.bin size: {} bytes", build_bin.len());
   for (i, atlas) in atlases.iter().enumerate() {
     log::debug!("atlas-{}.tex size: {} bytes", i, atlas.len());

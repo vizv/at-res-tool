@@ -5,6 +5,7 @@ use image::ImageBuffer;
 use image_dds::ddsfile::Dds;
 
 /// The Klei texture file
+#[derive(Debug)]
 pub struct Ktex {
   /// The header of the Klei texture file
   #[allow(unused)]
@@ -43,6 +44,7 @@ impl KtexHeader {
   const MAGIC: [u8; 4] = *b"KTEX";
   const SUPPORTED_VERSION: u8 = 2;
 
+  /// Creates a new ktex header from the given bytes
   pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
     if bytes.len() < std::mem::size_of::<Self>() {
       bail!("Not enough bytes for ktex header ({} bytes)", bytes.len());
@@ -57,20 +59,32 @@ impl KtexHeader {
 
     let magic = &bytes[0..4];
     if magic != Self::MAGIC {
-      bail!("Invalid ktex file: expected file magic {:?}, got {:?}", Self::MAGIC, magic);
+      bail!(
+        "Invalid ktex file: expected file magic {:?}, got {:?}",
+        Self::MAGIC,
+        magic
+      );
     }
     header.magic.copy_from_slice(magic);
 
     let version = bytes[4];
     if version != Self::SUPPORTED_VERSION {
-      bail!("Unsupported ktex file: expected version {}, got {}", Self::SUPPORTED_VERSION, version);
+      bail!(
+        "Unsupported ktex file: expected version {}, got {}",
+        Self::SUPPORTED_VERSION,
+        version
+      );
     }
     header.version = version;
 
     let width = u16::from_le_bytes(bytes[5..7].try_into().context("Failed to read width")?);
     let height = u16::from_le_bytes(bytes[7..9].try_into().context("Failed to read height")?);
     if width % 2 != 0 || height % 2 != 0 {
-      bail!("Invalid ktex file: width and height must be even, got {}x{}", width, height);
+      bail!(
+        "Invalid ktex file: width and height must be even, got {}x{}",
+        width,
+        height
+      );
     }
     header.width = u16::from_le_bytes(bytes[5..7].try_into().unwrap());
     header.height = u16::from_le_bytes(bytes[7..9].try_into().unwrap());
