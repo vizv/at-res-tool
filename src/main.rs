@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use flexi_logger::{LevelFilter, LogSpecBuilder, Logger};
 
 mod ktex;
 
@@ -26,13 +27,18 @@ enum KtexCommands {
   Dump { path: String },
 }
 
+const MOD_NAME: &str = "at_res_tool";
+
 #[tokio::main]
 async fn main() -> Result<()> {
   let args = Cli::parse();
 
+  let log_spec = LogSpecBuilder::new().default(LevelFilter::Info).module(MOD_NAME, LevelFilter::Debug).build();
+  Logger::with(log_spec).log_to_stdout().start().unwrap();
+
   match args.command {
     Commands::Ktex { command } => match command {
-      KtexCommands::Dump { path } => todo!("Dump Klei texture file at path: {}", path),
+      KtexCommands::Dump { path } => ktex::dump(path)?,
     },
   }
 
