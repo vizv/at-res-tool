@@ -17,7 +17,7 @@ impl Anim {
   pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
     let mut cursor = Cursor::new(bytes);
 
-    let header = AnimHeader::from_bytes(&mut cursor).context("failed to read anim header")?;
+    let header = AnimHeader::from_cursor(&mut cursor).context("failed to read anim header")?;
 
     Ok(Self { header })
   }
@@ -37,8 +37,8 @@ impl AnimHeader {
   const MAGIC: [u8; 4] = *b"ANIM";
   const SUPPORTED_VERSIONS: &[u32] = &[5, 6];
 
-  /// Creates a new anim header from the given bytes
-  pub fn from_bytes(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
+  /// Creates a new anim header from the given cursor
+  pub fn from_cursor(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
     cursor.read_magic(&Self::MAGIC).context("Failed to read magic")?;
 
     let mut header = Self::default();

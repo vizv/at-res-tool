@@ -26,7 +26,7 @@ impl Ktex {
   pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
     let mut cursor = Cursor::new(bytes);
 
-    let header = KtexHeader::from_bytes(&mut cursor).context("failed to read ktex header")?;
+    let header = KtexHeader::from_cursor(&mut cursor).context("failed to read ktex header")?;
     let dds = Dds::read(&mut cursor).context("failed to read DDS data")?;
 
     Ok(Self { header, dds })
@@ -50,8 +50,8 @@ impl KtexHeader {
   const MAGIC: [u8; 4] = *b"KTEX";
   const SUPPORTED_VERSION: u8 = 2;
 
-  /// Creates a new ktex header from the given bytes
-  pub fn from_bytes(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
+  /// Creates a new ktex header from the given cursor
+  pub fn from_cursor(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
     cursor.read_magic(&Self::MAGIC).context("Failed to read magic")?;
 
     let mut header = Self::default();

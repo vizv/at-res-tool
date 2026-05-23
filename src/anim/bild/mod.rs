@@ -4,6 +4,9 @@ use anyhow::{Context as _, Result, bail};
 
 use crate::io::*;
 
+mod frame;
+mod symbol;
+
 /// The Klei build file
 #[derive(Debug)]
 pub struct Bild {
@@ -16,6 +19,9 @@ pub struct Bild {
 
   /// Materials
   materials: Vec<String>,
+
+  /// Symbols
+  symbols: Vec<symbol::Symbol>,
 }
 
 impl Bild {
@@ -23,7 +29,7 @@ impl Bild {
   pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
     let mut cursor = Cursor::new(bytes);
 
-    let header = BildHeader::from_bytes(&mut cursor).context("failed to read build header")?;
+    let header = BildHeader::from_cursor(&mut cursor).context("failed to read build header")?;
     let name = cursor.read_pascal_string_u32_le().context("failed to read build name")?;
 
     let materials_len = cursor.read_u32_le().context("failed to read materials length")?;
@@ -31,10 +37,15 @@ impl Bild {
       .map(|_| cursor.read_pascal_string_u32_le().context("failed to read material name"))
       .collect::<Result<Vec<_>>>()?;
 
+    let symbols = (0..header.num_symbols)
+      .map(|_| symbol::Symbol::from_cursor(&mut cursor).context("failed to read symbol"))
+      .collect::<Result<Vec<_>>>()?;
+
     Ok(Self {
       header,
       name,
       materials,
+      symbols,
     })
   }
 }
@@ -51,8 +62,8 @@ impl BildHeader {
   const MAGIC: [u8; 4] = *b"BILD";
   const SUPPORTED_VERSION: u32 = 6;
 
-  /// Creates a new build header from the given bytes
-  pub fn from_bytes(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
+  /// Creates a new build header from the given cursor
+  pub fn from_cursor(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
     cursor.read_magic(&Self::MAGIC).context("Failed to read magic")?;
 
     let mut header = Self::default();

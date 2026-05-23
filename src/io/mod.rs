@@ -45,6 +45,16 @@ pub trait LittleEndianReadExt: io::Read {
 
 impl<R: io::Read> LittleEndianReadExt for R {}
 
+pub trait FloatReadExt: io::Read {
+  fn read_f32_le(&mut self) -> io::Result<f32> {
+    let mut out = [0u8; 4];
+    self.read_exact(&mut out)?;
+    Ok(f32::from_le_bytes(out))
+  }
+}
+
+impl<R: io::Read> FloatReadExt for R {}
+
 /// Helper methods for reading pascal strings (length-prefixed UTF-8 strings).
 pub trait PascalStringReadExt: io::Read {
   fn read_pascal_string_u32_le(&mut self) -> io::Result<String> {
