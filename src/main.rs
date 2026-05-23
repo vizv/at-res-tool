@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use flexi_logger::{LevelFilter, LogSpecBuilder, Logger};
 
+mod anim;
 mod ktex;
 
 /// The Away Team resource tool for dumping and repacking game resources
@@ -19,11 +20,22 @@ enum Commands {
     #[command(subcommand)]
     command: KtexCommands,
   },
+  /// Commands for Klei animation files
+  Anim {
+    #[command(subcommand)]
+    command: AnimCommands,
+  },
 }
 
 #[derive(Debug, Subcommand)]
 enum KtexCommands {
   /// Dump a Klei texture file
+  Dump { path: String },
+}
+
+#[derive(Debug, Subcommand)]
+enum AnimCommands {
+  /// Dump a Klei animation file
   Dump { path: String },
 }
 
@@ -39,6 +51,9 @@ async fn main() -> Result<()> {
   match args.command {
     Commands::Ktex { command } => match command {
       KtexCommands::Dump { path } => ktex::dump(path)?,
+    },
+    Commands::Anim { command } => match command {
+      AnimCommands::Dump { path } => anim::dump(path)?,
     },
   }
 
