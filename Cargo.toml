@@ -10,5 +10,7 @@ flexi_logger = "0.31.8"
 image = { version = "0.25.10", features = ["png"] }
 image_dds = { version = "0.7.2", features = ["ddsfile", "image"] }
 log = "0.4.29"
+quick-xml = { version = "0.40.1", features = ["serialize"] }
+serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["full"] }
 zip = { version = "8.6.0", features = ["deflate"], default-features = false }

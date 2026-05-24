@@ -1,13 +1,19 @@
-use std::{collections::BTreeMap, fs::File, io::Read};
+use std::{
+  collections::BTreeMap, fmt, fs::{self, File}, io::Read
+};
 
 use anyhow::{Context as _, Result, bail};
 use image::{ImageBuffer, Rgba};
+use quick_xml::se::{self, Serializer};
+use serde::Serialize;
 use zip::ZipArchive;
 
 mod shared;
 
 mod anim;
 mod bild;
+
+mod scml;
 
 pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
   let file = File::open(&path).context("failed to open anim file")?;
@@ -49,7 +55,7 @@ pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
     let build = bild::parse(&build_bin).context("failed to parse build.bin from anim file")?;
     let build_xml_path = path.as_ref().with_extension("build.xml");
     // TODO: export build to XML
-    // log::debug!("build.bin: {:#?}", build);
+    log::debug!("build.bin: {:#?}", build);
 
     let atlas_images: BTreeMap<usize, ImageBuffer<Rgba<u8>, Vec<u8>>> = atlases
       .iter()
@@ -61,7 +67,6 @@ pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
       .collect::<Result<BTreeMap<_, _>>>()?;
 
     // export sprites
-    let build_name = build.name.as_str();
     for symbol in build.symbols {
       let symbol_name = symbol.name.as_str();
       for frame in symbol.frames {
@@ -95,8 +100,24 @@ pub fn dump(path: impl AsRef<std::path::Path>) -> Result<()> {
       let animations = anim::parse(&anim_bin).context("failed to parse anim.bin from anim file")?;
       let anim_xml_path = path.as_ref().with_extension("anim.xml");
       // TODO: export animations to XML
-      // log::debug!("animations: {:#?}", animations);
+      log::debug!("animations: {:#?}", animations);
     }
+
+    let scml_root = scml::SpriterData::default();
+    let scml_xml_path = path.as_ref().with_extension("scml.xml");
+    let mut scml_output = String::new();
+    let mut serializer = Serializer::new(&mut scml_output);
+    serializer.indent(' ', 4);
+    scml_root.serialize(serializer).context("failed to serialize scml.xml")?;
+    // let scml_file = File::create(&scml_xml_path).context("failed to create scml.xml file")?;
+    // let scml_writer = std::io::BufWriter::new(scml_file);
+    // let scml_writer = quick_xml::writer::Writer::new(scml_writer);
+    // let scml_output = r#"<?xml version="1.0" encoding="UTF-8"?>"#.to_string()
+    //   + &se::to_string(&scml_object).context("failed to serialize scml.xml")?;
+    // scml_output.insert_str(0, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    // scml_output.push('\n');
+    let scml_output = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n{}\n", scml_output);
+    fs::write(&scml_xml_path, scml_output).context("failed to write scml.xml file")?;
   }
 
   Ok(())
