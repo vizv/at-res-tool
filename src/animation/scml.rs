@@ -16,7 +16,7 @@ pub struct SpriterData {
   #[serde(rename = "@generator_version")]
   generator_version: String,
   #[serde(rename = "folder")]
-  folders: Vec<Folder>,
+  pub folders: Vec<Folder>,
   // #[serde(rename = "entity")]
   // entities: Vec<Entity>,
 }
@@ -35,27 +35,27 @@ impl Default for SpriterData {
 #[derive(Debug, Default, Serialize)]
 pub struct Folder {
   #[serde(rename = "@id")]
-  id: u32,
+  pub id: u32,
   #[serde(rename = "@name")]
-  name: String,
+  pub name: String,
   #[serde(rename = "file")]
-  files: Vec<File>,
+  pub files: Vec<File>,
 }
 
 #[derive(Debug, Default, Serialize)]
 pub struct File {
   #[serde(rename = "@id")]
-  id: u32,
+  pub id: u32,
   #[serde(rename = "@name")]
-  name: String,
+  pub name: String,
   #[serde(rename = "@width")]
-  width: u32,
+  pub width: u32,
   #[serde(rename = "@height")]
-  height: u32,
+  pub height: u32,
   #[serde(rename = "@pivot_x")]
-  pivot_x: f32,
+  pub pivot_x: f32,
   #[serde(rename = "@pivot_y")]
-  pivot_y: f32,
+  pub pivot_y: f32,
 }
 
 // #[derive(Debug, Default, Serialize)]
